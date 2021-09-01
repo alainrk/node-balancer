@@ -33,7 +33,7 @@ function serviceUpdateRoutine () {
       return res.end('Bad gateway')
     }
   })
-  setTimeout(serviceUpdateRoutine, 3000)
+  setTimeout(serviceUpdateRoutine, 10 * 1000)
 }
 
 serviceUpdateRoutine()
@@ -64,7 +64,11 @@ const server = createServer((req, res) => {
   console.log(`Using server ${server.ID}`)
 
   const target = `http://${server.Address}:${server.Port}`
-  proxy.web(req, res, { target })
+  proxy.web(req, res, { target }, (err) => {
+    console.error(err)
+    res.writeHead(404)
+    res.end('Service not available')
+  })
 })
 
 server.listen(8080, () => {
