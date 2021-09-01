@@ -1,14 +1,13 @@
 const { createServer } = require('http')
-const { consul } = require('consul')
 const { nanoid } = require('nanoid')
+const consul = require('consul')
 const portfinder = require('portfinder')
-const { create } = require('domain')
 
 const serviceType = process.argv[2]
 const { pid } = process
 
 async function main () {
-  const consulClient = consul()
+  const consulClient = consul({ host: 'localhost', port: 8500 })
 
   const port = await portfinder.getPortPromise()
   const address = process.env.ADDRESS || 'localhost'
@@ -17,20 +16,21 @@ async function main () {
   function registerService () {
     const service = {
       id: serviceId,
-      type: serviceType,
+      name: serviceType,
       port,
       address,
       tags: [serviceType]
     }
+    console.log(service)
     consulClient.agent.service.register(service, () => {
-      console.log(`Registered service ${serviceId}`)
+      console.log(`Registered service ${serviceType} - id: ${serviceId}`)
     })
   }
 
   function unregisterService (err) {
     err && console.log(err)
     consulClient.agent.service.deregister(serviceId, () => {
-      console.log(`Unregistered service ${serviceId}`)
+      console.log(`Unregistered service ${serviceType} - id: ${serviceId}`)
       process.exit(err ? 1 : 0)
     })
   }
