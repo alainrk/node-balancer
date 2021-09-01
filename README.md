@@ -1,0 +1,1 @@
+Inspired by [NodeJs Design Patterns - HTTP Dynamic Load Balancer](https://github.com/PacktPublishing/Node.js-Design-Patterns-Third-Edition/tree/master/12-scalability-and-architectural-patterns/06-http-dynamic-load-balancer)
