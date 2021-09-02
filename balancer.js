@@ -5,29 +5,33 @@ const logger = require('pino')({ prettyPrint: true })
 const { join } = require('path')
 
 const configRoutes = require(join(__dirname, 'config', 'routes.json'))
-const routing = configRoutes.map(item => {
-  item.index = 0
-  return item
-})
 
-let serversByService = {}
+const serversByService = {}
+const routing = []
+
+for (const route of configRoutes) {
+  routing.push({ ...route, index: 0 })
+  serversByService[route.service] = []
+}
 
 const consulClient = consul({ host: 'localhost', port: 8500 })
 const proxy = httpProxy.createProxyServer()
 
 function serviceUpdateRoutine () {
   consulClient.agent.service.list((err, services) => {
-    serversByService = {}
-
     if (err || !services) return
+
+    for (const service in serversByService) {
+      serversByService[service] = []
+    }
 
     for (const service of Object.values(services)) {
       for (const tag of service.Tags) {
-        if (!serversByService[tag]) serversByService[tag] = []
         serversByService[tag].push(service)
       }
     }
 
+    logger.info(`Updated servers ${ JSON.stringify(serversByService, ' ', 2) }`)
     // logger.info('Updated servers', JSON.stringify(serversByService, ' ', 2))
 
     if (err) {
