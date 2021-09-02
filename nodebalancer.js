@@ -1,38 +1,40 @@
-const { createServer } = require('http')
 const httpProxy = require('http-proxy')
 const consul = require('consul')
 const logger = require('pino')({ prettyPrint: true })
+
+const { createServer } = require('http')
 const { join } = require('path')
 
 const configRoutes = require(join(__dirname, 'config', 'routes.json'))
 
-const serversByService = {}
-const routing = []
-
-for (const route of configRoutes) {
-  routing.push({ ...route, index: 0 })
-  serversByService[route.service] = []
-}
-
 const consulClient = consul({ host: 'localhost', port: 8500 })
 const proxy = httpProxy.createProxyServer()
+
+function initParams (routes) {
+  const serversByService = {}
+  const routing = []
+  for (const route of routes) {
+    routing.push({ ...route, index: 0 })
+    serversByService[route.service] = []
+  }
+  return { serversByService, routing }
+}
 
 function serviceUpdateRoutine () {
   consulClient.agent.service.list((err, services) => {
     if (err || !services) return
 
-    for (const service in serversByService) {
-      serversByService[service] = []
+    for (const service in this.serversByService) {
+      this.serversByService[service] = []
     }
 
     for (const service of Object.values(services)) {
       for (const tag of service.Tags) {
-        serversByService[tag].push(service)
+        this.serversByService[tag].push(service)
       }
     }
 
-    logger.info(`Updated servers ${ JSON.stringify(serversByService, ' ', 2) }`)
-    // logger.info('Updated servers', JSON.stringify(serversByService, ' ', 2))
+    logger.info(`Updated servers ${ JSON.stringify(this.serversByService, ' ', 2) }`)
 
     if (err) {
       if (err) logger.info('Err:', err)
@@ -40,20 +42,19 @@ function serviceUpdateRoutine () {
       return res.end('Bad gateway')
     }
   })
-  setTimeout(serviceUpdateRoutine, 10 * 1000)
 }
 
 function requestHandler (req, res) {
-  logger.info('Request:', req.url)
+  logger.info(`Process ${process.pid} | Request: ${req.url}`)
 
-  const route = routing.find((route) => req.url.startsWith(route.path))
+  const route = this.routing.find((route) => req.url.startsWith(route.path))
 
   if (!route) {
     res.writeHead(502)
     return res.end('Bad gateway')
   }
 
-  const servers = serversByService[route.service]
+  const servers = this.serversByService[route.service]
 
   if (!servers || !servers.length) {
     logger.error(`No servers for path:${route.path} - service:${route.service}`)
@@ -75,10 +76,26 @@ function requestHandler (req, res) {
   })
 }
 
-serviceUpdateRoutine()
+function listen () {
+  this.server.listen(this.port, () => {
+    logger.info(`Load balancer is listening on port ${this.port}`)
+  })
+}
 
-const server = createServer(requestHandler)
+function nodebalancer ({ port = 8080, serviceRegistryUpdateSecs = 10 }) {
+  const { serversByService, routing } = initParams(configRoutes)
 
-server.listen(8080, () => {
-  logger.info('Load balancer is listening on port 8080')
-})
+  this.routing = routing
+  this.serversByService = serversByService
+  this.port = port
+
+  serviceUpdateRoutine()
+  setInterval(serviceUpdateRoutine.bind(this), serviceRegistryUpdateSecs * 1000)
+
+  this.server = createServer(requestHandler.bind(this))
+  this.listen = listen
+
+  return this
+}
+
+module.exports = nodebalancer
