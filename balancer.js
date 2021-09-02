@@ -6,16 +6,19 @@ const { join } = require('path')
 
 const configRoutes = require(join(__dirname, 'config', 'routes.json'))
 
-const serversByService = {}
-const routing = []
-
-for (const route of configRoutes) {
-  routing.push({ ...route, index: 0 })
-  serversByService[route.service] = []
-}
+const SERVICES_UPDATE_SECONDS = 10
 
 const consulClient = consul({ host: 'localhost', port: 8500 })
 const proxy = httpProxy.createProxyServer()
+const serversByService = {}
+const routing = []
+
+function initParams () {
+  for (const route of configRoutes) {
+    routing.push({ ...route, index: 0 })
+    serversByService[route.service] = []
+  }
+}
 
 function serviceUpdateRoutine () {
   consulClient.agent.service.list((err, services) => {
@@ -32,7 +35,6 @@ function serviceUpdateRoutine () {
     }
 
     logger.info(`Updated servers ${ JSON.stringify(serversByService, ' ', 2) }`)
-    // logger.info('Updated servers', JSON.stringify(serversByService, ' ', 2))
 
     if (err) {
       if (err) logger.info('Err:', err)
@@ -40,7 +42,7 @@ function serviceUpdateRoutine () {
       return res.end('Bad gateway')
     }
   })
-  setTimeout(serviceUpdateRoutine, 10 * 1000)
+  setTimeout(serviceUpdateRoutine, SERVICES_UPDATE_SECONDS * 1000)
 }
 
 function requestHandler (req, res) {
@@ -75,10 +77,14 @@ function requestHandler (req, res) {
   })
 }
 
-serviceUpdateRoutine()
+function main () {
+  initParams()
+  serviceUpdateRoutine()
+  const server = createServer(requestHandler)
 
-const server = createServer(requestHandler)
+  server.listen(8080, () => {
+    logger.info('Load balancer is listening on port 8080')
+  })
+}
 
-server.listen(8080, () => {
-  logger.info('Load balancer is listening on port 8080')
-})
+main()
