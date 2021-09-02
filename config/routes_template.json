@@ -1,0 +1,4 @@
+[
+  { "path": "/api", "service": "api" },
+  { "path": "/web", "service": "web" }
+]

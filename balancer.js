@@ -2,11 +2,13 @@ const { createServer } = require('http')
 const httpProxy = require('http-proxy')
 const consul = require('consul')
 const logger = require('pino')({ prettyPrint: true })
+const { join } = require('path')
 
-const routing = [
-  { path: '/api', service: 'api', index: 0 },
-  { path: '/web', service: 'web', index: 0 }
-]
+const configRoutes = require(join(__dirname, 'config', 'routes.json'))
+const routing = configRoutes.map(item => {
+  item.index = 0
+  return item
+})
 
 let serversByService = {}
 
@@ -37,9 +39,7 @@ function serviceUpdateRoutine () {
   setTimeout(serviceUpdateRoutine, 10 * 1000)
 }
 
-serviceUpdateRoutine()
-
-const server = createServer((req, res) => {
+function requestHandler (req, res) {
   logger.info('Request:', req.url)
 
   const route = routing.find((route) => req.url.startsWith(route.path))
@@ -48,8 +48,6 @@ const server = createServer((req, res) => {
     res.writeHead(502)
     return res.end('Bad gateway')
   }
-
-  // logger.info(route.service, serversByService[route.service])
 
   const servers = serversByService[route.service]
 
@@ -71,7 +69,11 @@ const server = createServer((req, res) => {
     res.writeHead(404)
     res.end(`Service ${route.service} not available`)
   })
-})
+}
+
+serviceUpdateRoutine()
+
+const server = createServer(requestHandler)
 
 server.listen(8080, () => {
   logger.info('Load balancer is listening on port 8080')
