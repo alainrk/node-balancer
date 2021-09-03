@@ -23,7 +23,7 @@ function initParams (routes) {
   return { serversByService, routing }
 }
 
-function NodeBalancer ({ port = 8080, serviceRegistryUpdateSecs = 10 }) {
+function NodeBalancer ({ port = 8080 }) {
   if (!(this instanceof NodeBalancer)) return new NodeBalancer({})
 
   const { serversByService, routing } = initParams(configRoutes)
@@ -32,34 +32,23 @@ function NodeBalancer ({ port = 8080, serviceRegistryUpdateSecs = 10 }) {
   this.serversByService = serversByService
   this.port = port
 
-  this.serviceUpdateRoutine()
-  setInterval(this.serviceUpdateRoutine.bind(this), serviceRegistryUpdateSecs * 1000)
-
   this.server = createServer(this.requestHandler.bind(this))
 }
 
-NodeBalancer.prototype.serviceUpdateRoutine = function () {
-  consulClient.agent.service.list((err, services) => {
-    if (err || !services) return
+NodeBalancer.prototype.updateServices = function (services) {
+  if (!services) return
 
-    for (const service in this.serversByService) {
-      this.serversByService[service] = []
+  for (const service in this.serversByService) {
+    this.serversByService[service] = []
+  }
+
+  for (const service of Object.values(services)) {
+    for (const tag of service.Tags) {
+      this.serversByService[tag].push(service)
     }
+  }
 
-    for (const service of Object.values(services)) {
-      for (const tag of service.Tags) {
-        this.serversByService[tag].push(service)
-      }
-    }
-
-    logger.info(`Updated servers ${ JSON.stringify(this.serversByService, ' ', 2) }`)
-
-    if (err) {
-      if (err) logger.info('Err:', err)
-      res.writeHead(502)
-      return res.end('Bad gateway')
-    }
-  })
+  logger.info(`Updated servers ${ JSON.stringify(this.serversByService, ' ', 2) }`)
 }
 
 NodeBalancer.prototype.requestHandler = function (req, res) {
