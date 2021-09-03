@@ -19,7 +19,7 @@ if (cluster.isMaster) {
     for (const worker of Object.values(workers)) {
       worker.send({ msg: 'Msg from master', date: Date.now() })
     }
-  }, 3000)
+  }, 30000)
 
   cluster.on('exit', (worker, code, signal) => {
     logger.info(`worker ${worker.process.pid} died`)
@@ -39,6 +39,6 @@ if (cluster.isMaster) {
 
   // Workers can share any TCP connection
   // In this case it is inside the balancer
-  const app = new NodeBalancer({ port: 8080, serviceRegistryUpdateSecs: 15 })
+  const app = new NodeBalancer({ port: 8080, serviceRegistryUpdateSecs: 10 })
   app.listen()
 }

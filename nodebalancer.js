@@ -86,7 +86,7 @@ NodeBalancer.prototype.requestHandler = function (req, res) {
 
   logger.info(`Using server ${server.ID}`)
 
-  const target = `https://${server.Address}:${server.Port}`
+  const target = `http://${server.Address}:${server.Port}`
   proxy.web(req, res, { target }, (err) => {
     logger.error(err)
     res.writeHead(404)
