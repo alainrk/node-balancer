@@ -13,12 +13,16 @@ if (cluster.isMaster) {
 
   cluster.on('exit', (worker, code, signal) => {
     logger.info(`worker ${worker.process.pid} died`)
+    if (code !== 0 && !worker.exitedAfterDisconnect) {
+      logger.info(`The worker crashed, starting a new worker...`)
+      cluster.fork()
+    }
   })
 } else {
+  logger.info(`Worker ${process.pid} started`)
+
   // Workers can share any TCP connection
   // In this case it is inside the balancer
   const app = nodebalancer({ port: 8080, serviceRegistryUpdateSecs: 100 })
   app.listen()
-
-  logger.info(`Worker ${process.pid} started`)
 }
