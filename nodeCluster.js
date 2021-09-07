@@ -1,7 +1,7 @@
 'use strict'
 
 const cluster = require('cluster')
-const numCPUs = 2 // require('os').cpus().length
+const numCPUs = require('os').cpus().length
 const NodeBalancer = require('./nodeBalancer')
 const logger = require('pino')({ prettyPrint: true })
 const consul = require('consul')
@@ -29,11 +29,11 @@ if (cluster.isMaster) {
   cluster.on('exit', (worker, code, signal) => {
     logger.info(`worker ${worker.process.pid} died`)
     delete workers[worker.id]
-    // if (code !== 0 && !worker.exitedAfterDisconnect) {
-    //   logger.info(`The worker crashed, starting a new worker...`)
-    //   const worker = cluster.fork()
-    //   workers[worker.id] = worker
-    // }
+    if (code !== 0 && !worker.exitedAfterDisconnect) {
+      logger.info(`The worker crashed, starting a new worker...`)
+      const worker = cluster.fork()
+      workers[worker.id] = worker
+    }
   })
 
   updateServices()
