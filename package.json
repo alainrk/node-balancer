@@ -2,10 +2,10 @@
   "name": "node-balancer",
   "version": "1.0.0",
   "description": "KISS Node Load Balancer",
-  "main": "nodeBalancer.js",
+  "main": "src/nodeCluster.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node nodebalancer.js"
+    "start": "node src/nodeCluster.js"
   },
   "keywords": [
     "load-balancer",

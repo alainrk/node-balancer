@@ -7,10 +7,8 @@ const logger = require('pino')({ prettyPrint: true })
 const { createServer } = require('http')
 const { join } = require('path')
 
-const configRoutes = require(join(__dirname, 'config', 'routes.json'))
+const configRoutes = require(join(__dirname, '..', 'config', 'routes.json'))
 
-const consulClient = consul({ host: 'localhost', port: 8500 })
-// TODO [HTTPS]: https://www.npmjs.com/package/http-proxy#using-https
 const proxy = httpProxy.createProxyServer()
 
 function initParams (routes) {

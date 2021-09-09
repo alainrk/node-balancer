@@ -12,9 +12,9 @@ npm start
 
 ## Start your services
 ```
-forever start --killSignal=SIGINT app.js api
-forever start --killSignal=SIGINT app.js api
-forever start --killSignal=SIGINT app.js webapp
+forever start --killSignal=SIGINT example/app.js api
+forever start --killSignal=SIGINT example/app.js api
+forever start --killSignal=SIGINT example/app.js webapp
 ```
 
 ## Call services through load balancer
